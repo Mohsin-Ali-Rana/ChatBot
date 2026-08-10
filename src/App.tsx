@@ -21,8 +21,10 @@ import {
   deleteUserSessionFromSupabase 
 } from './lib/supabase';
 
-const LOCAL_STORAGE_SESSION_KEY = 'nexus_current_session_id';
-const LOCAL_STORAGE_SESSIONS_LIST_KEY = 'nexus_chat_sessions';
+// Helper local storage keys per user context
+const getGuestStorageKey = () => 'nexus_guest_sessions';
+const getUserStorageKey = (userId: string) => `nexus_chat_sessions_${userId}`;
+const getUserActiveKey = (userId: string) => `nexus_current_session_${userId}`;
 
 export const App: React.FC = () => {
   // State
@@ -61,7 +63,7 @@ export const App: React.FC = () => {
           };
           
           setUser(profile);
-          loadUserSessions(sbUser.id);
+          await loadUserSessions(sbUser.id);
         } else {
           handleGuestInit();
         }
@@ -88,7 +90,7 @@ export const App: React.FC = () => {
         };
         
         setUser(profile);
-        loadUserSessions(sbUser.id);
+        await loadUserSessions(sbUser.id);
       } else if (event === 'SIGNED_OUT') {
         handleGuestInit();
       }
@@ -99,64 +101,106 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // Robust session loader: Syncs remote database data with isolated local cache
   const loadUserSessions = async (userId: string) => {
-    const remoteSessions = await fetchUserSessionsFromSupabase(userId);
-    let initialSessions: ChatSession[] = remoteSessions || [];
+    const userStorageKey = getUserStorageKey(userId);
+    const userActiveKey = getUserActiveKey(userId);
 
-    if (initialSessions.length === 0) {
-      const savedSessionsStr = localStorage.getItem(LOCAL_STORAGE_SESSIONS_LIST_KEY);
-      if (savedSessionsStr) {
+    // 1. Query Supabase remote database first
+    const remoteSessions = await fetchUserSessionsFromSupabase(userId);
+    let loadedSessions: ChatSession[] = [];
+
+    if (remoteSessions && remoteSessions.length > 0) {
+      console.log('✅ Synchronized remote sessions from Supabase:', remoteSessions.length);
+      loadedSessions = remoteSessions;
+      localStorage.setItem(userStorageKey, JSON.stringify(remoteSessions));
+    } else {
+      // 2. Fallback to user-isolated local cache if remote returned empty/offline
+      const cachedStr = localStorage.getItem(userStorageKey);
+      if (cachedStr) {
         try {
-          initialSessions = JSON.parse(savedSessionsStr);
+          loadedSessions = JSON.parse(cachedStr);
+          console.log('ℹ️ Loaded sessions from user local cache:', loadedSessions.length);
         } catch (e) {
-          console.error('Failed to parse local sessions', e);
+          console.error('Failed to parse cached user sessions:', e);
         }
       }
     }
 
-    let activeId = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY) || '';
+    let activeId = localStorage.getItem(userActiveKey) || '';
 
-    if (initialSessions.length === 0) {
+    // 3. If zero sessions found anywhere, create initial clean conversation
+    if (loadedSessions.length === 0) {
       const newId = typeof crypto !== 'undefined' && crypto.randomUUID 
         ? crypto.randomUUID() 
         : `session_${Date.now()}`;
-      initialSessions = [{
+      loadedSessions = [{
         id: newId,
         title: 'New Conversation',
         createdAt: new Date().toISOString(),
         messages: [],
       }];
       activeId = newId;
-    } else if (!activeId || !initialSessions.some((s) => s.id === activeId)) {
-      activeId = initialSessions[0].id;
+    } else if (!activeId || !loadedSessions.some((s) => s.id === activeId)) {
+      activeId = loadedSessions[0].id;
     }
 
-    setSessions(initialSessions);
+    setSessions(loadedSessions);
     setCurrentSessionId(activeId);
+    localStorage.setItem(userActiveKey, activeId);
   };
 
   const handleGuestInit = () => {
-    const guestId = typeof crypto !== 'undefined' && crypto.randomUUID 
-      ? crypto.randomUUID() 
-      : `session_${Date.now()}`;
-    const guestSession: ChatSession = {
-      id: guestId,
-      title: 'New Conversation',
-      createdAt: new Date().toISOString(),
-      messages: [],
-    };
+    const guestKey = getGuestStorageKey();
+    const cachedGuest = localStorage.getItem(guestKey);
+    let guestSessions: ChatSession[] = [];
+
+    if (cachedGuest) {
+      try {
+        guestSessions = JSON.parse(cachedGuest);
+      } catch (e) {
+        console.error('Failed to parse guest sessions:', e);
+      }
+    }
+
+    if (guestSessions.length === 0) {
+      const guestId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : `session_${Date.now()}`;
+      guestSessions = [{
+        id: guestId,
+        title: 'New Conversation',
+        createdAt: new Date().toISOString(),
+        messages: [],
+      }];
+    }
+
     setUser(null);
-    setSessions([guestSession]);
-    setCurrentSessionId(guestId);
+    setSessions(guestSessions);
+    setCurrentSessionId(guestSessions[0].id);
   };
 
-  // Save sessions to localStorage & Supabase DB on update ONLY if logged in
+  // Sync sessions to user-isolated LocalStorage & Supabase DB on updates
   useEffect(() => {
-    if (user && sessions.length > 0) {
-      localStorage.setItem(LOCAL_STORAGE_SESSIONS_LIST_KEY, JSON.stringify(sessions));
-      const activeSession = sessions.find((s) => s.id === currentSessionId);
-      if (activeSession) {
-        saveUserSessionToSupabase(user.id, activeSession);
+    if (user) {
+      if (sessions.length > 0) {
+        const userStorageKey = getUserStorageKey(user.id);
+        const userActiveKey = getUserActiveKey(user.id);
+
+        localStorage.setItem(userStorageKey, JSON.stringify(sessions));
+        if (currentSessionId) {
+          localStorage.setItem(userActiveKey, currentSessionId);
+        }
+
+        const activeSession = sessions.find((s) => s.id === currentSessionId);
+        if (activeSession && activeSession.messages.length > 0) {
+          saveUserSessionToSupabase(user.id, activeSession);
+        }
+      }
+    } else {
+      // Guest mode caching
+      if (sessions.length > 0) {
+        localStorage.setItem(getGuestStorageKey(), JSON.stringify(sessions));
       }
     }
   }, [sessions, user, currentSessionId]);
@@ -191,8 +235,7 @@ export const App: React.FC = () => {
     } else {
       setSessions((prev) => [newSession, ...prev]);
       setCurrentSessionId(newId);
-      localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, newId);
-      saveUserSessionToSupabase(user.id, newSession);
+      localStorage.setItem(getUserActiveKey(user.id), newId);
     }
 
     window.scrollTo(0, 0);
@@ -233,9 +276,8 @@ export const App: React.FC = () => {
       setCurrentSessionId(newId);
       
       if (user) {
-        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, newId);
-        localStorage.setItem(LOCAL_STORAGE_SESSIONS_LIST_KEY, JSON.stringify([freshSession]));
-        saveUserSessionToSupabase(user.id, freshSession);
+        localStorage.setItem(getUserActiveKey(user.id), newId);
+        localStorage.setItem(getUserStorageKey(user.id), JSON.stringify([freshSession]));
       }
     } else {
       setSessions(updated);
@@ -243,11 +285,11 @@ export const App: React.FC = () => {
         const nextActiveId = updated[0].id;
         setCurrentSessionId(nextActiveId);
         if (user) {
-          localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, nextActiveId);
+          localStorage.setItem(getUserActiveKey(user.id), nextActiveId);
         }
       }
       if (user) {
-        localStorage.setItem(LOCAL_STORAGE_SESSIONS_LIST_KEY, JSON.stringify(updated));
+        localStorage.setItem(getUserStorageKey(user.id), JSON.stringify(updated));
       }
     }
 
@@ -277,20 +319,7 @@ export const App: React.FC = () => {
     supabase.auth.signOut().catch(console.error);
     setUser(null);
     localStorage.removeItem('nexus_token');
-    localStorage.removeItem(LOCAL_STORAGE_SESSIONS_LIST_KEY);
-    localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
-    
-    const newId = typeof crypto !== 'undefined' && crypto.randomUUID 
-      ? crypto.randomUUID() 
-      : `session_${Date.now()}`;
-    const freshSession: ChatSession = {
-      id: newId,
-      title: 'New Conversation',
-      createdAt: new Date().toISOString(),
-      messages: [],
-    };
-    setSessions([freshSession]);
-    setCurrentSessionId(newId);
+    handleGuestInit();
 
     setToast({
       id: Date.now().toString(),
@@ -419,7 +448,7 @@ export const App: React.FC = () => {
         onLoginSuccess={handleLoginSuccess}
       />
 
-      {/* Sidebar Drawer */}
+      {/* Drawer Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -428,7 +457,7 @@ export const App: React.FC = () => {
         onSelectSession={(id) => {
           setCurrentSessionId(id);
           if (user) {
-            localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, id);
+            localStorage.setItem(getUserActiveKey(user.id), id);
           }
         }}
         onNewChat={handleNewChat}
@@ -448,34 +477,37 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-6 flex flex-col justify-between">
-        
+      <main className="flex-1 flex flex-col items-center justify-between w-full max-w-4xl mx-auto px-4 pt-16 pb-4 z-10 min-h-[calc(100vh-4rem)]">
         {messages.length === 0 ? (
-          /* Empty State: Natural Flow with Center Focus Input */
-          <div className="flex-1 flex flex-col justify-center my-auto">
-            <WelcomeState onSendMessage={handleSendMessage} isLoading={isLoading} />
-          </div>
+          <WelcomeState
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+          />
         ) : (
-          /* Active Chat Feed & Fixed Bottom Input Console */
-          <div className="flex-1 flex flex-col justify-between space-y-4">
-            <div className="flex-1 space-y-4 pb-6">
-              <AnimatePresence initial={false}>
-                {messages.map((msg) => (
-                  <ChatMessageComponent key={msg.id} message={msg} />
-                ))}
-              </AnimatePresence>
+          <div className="w-full flex-1 flex flex-col justify-between pt-4 pb-2">
+            <div className="space-y-4 mb-4">
+              {messages.map((msg) => (
+                <ChatMessageComponent key={msg.id} message={msg} />
+              ))}
 
               {isLoading && <TypingIndicator />}
-              <div ref={chatBottomRef} className="h-2" />
+              
+              <div ref={chatBottomRef} />
             </div>
 
-            <div className="sticky bottom-0 pt-2 pb-3 sm:pb-4 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/95 to-transparent z-20">
-              <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+            {/* Sticky Input Bar at Bottom during active conversation */}
+            <div className="sticky bottom-0 bg-[#0b0f19]/90 backdrop-blur-xl pt-2 pb-2 mt-auto border-t border-white/5">
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                isLoading={isLoading}
+                placeholder="Ask Nexus AI anything..."
+              />
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
 };
+
+export default App;

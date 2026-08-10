@@ -5,9 +5,10 @@ import { Mic, ArrowUp, Globe, Plus } from 'lucide-react';
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
   isLoading: boolean;
+  placeholder?: string;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, placeholder }) => {
   const [text, setText] = useState('');
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +56,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Nexus AI anything... (Press Enter to send)"
+            placeholder={placeholder || "Ask Nexus AI anything... (Press Enter to send)"}
             disabled={isLoading}
             className="w-full bg-transparent border-0 outline-none focus:outline-none resize-none text-slate-100 placeholder-slate-400/70 text-sm sm:text-base py-1 px-1 min-h-[44px] max-h-[180px] leading-relaxed relative z-10 scrollbar-thin"
           />
