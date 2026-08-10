@@ -47,15 +47,15 @@ export const WelcomeState: React.FC<WelcomeStateProps> = ({ onSendMessage, isLoa
       initial={{ opacity: 0, scale: 0.98, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center text-center px-2 sm:px-4 space-y-4 sm:space-y-6 my-auto py-4"
+      className="w-full max-w-4xl mx-auto flex flex-col items-center justify-center text-center px-2 sm:px-4 space-y-3 sm:space-y-5 my-auto py-2 sm:py-4"
     >
       {/* 1. Hero Animated NexusLogo & Title */}
       <div className="flex flex-col items-center">
-        <div className="mb-2 sm:mb-3">
+        <div className="mb-1.5 sm:mb-3">
           <NexusLogo size="lg" showText={false} />
         </div>
 
-        <h2 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-1.5 sm:mb-2 max-w-2xl leading-tight px-2">
+        <h2 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-1 sm:mb-2 max-w-2xl leading-tight px-2">
           How can <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Nexus AI</span> elevate your work today?
         </h2>
         
@@ -74,8 +74,8 @@ export const WelcomeState: React.FC<WelcomeStateProps> = ({ onSendMessage, isLoa
         <QuickChips onSelectChip={onSendMessage} disabled={isLoading} />
       </div>
 
-      {/* 4. Feature Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5 w-full text-left pt-1">
+      {/* 4. Feature Cards Grid - 2x2 grid on all screens */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3.5 w-full text-left pt-1">
         {cards.map((card, idx) => {
           const Icon = card.icon;
           return (
@@ -84,16 +84,16 @@ export const WelcomeState: React.FC<WelcomeStateProps> = ({ onSendMessage, isLoa
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onSendMessage(card.prompt)}
-              className={`glass-card p-3.5 sm:p-4 rounded-2xl border ${card.color} cursor-pointer group transition-all relative overflow-hidden shadow-lg`}
+              className={`glass-card p-2.5 sm:p-4 rounded-xl sm:rounded-2xl border ${card.color} cursor-pointer group transition-all relative overflow-hidden shadow-lg`}
             >
-              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-white">
-                  <Icon className="w-4 h-4" />
-                  <span>{card.title}</span>
+              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                <div className="flex items-center gap-1.5 font-bold text-[11px] sm:text-sm text-white truncate pr-1">
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                  <span className="truncate">{card.title}</span>
                 </div>
-                <ArrowUpRight className="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all text-white" />
+                <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all text-white flex-shrink-0" />
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed">
+              <p className="text-[10px] sm:text-xs text-slate-400 leading-relaxed line-clamp-2">
                 {card.desc}
               </p>
             </motion.div>

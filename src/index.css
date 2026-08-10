@@ -86,6 +86,15 @@
   background: rgba(139, 92, 246, 0.4);
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Ambient glow animations */
 @keyframes ambientGlow1 {
   0%, 100% {

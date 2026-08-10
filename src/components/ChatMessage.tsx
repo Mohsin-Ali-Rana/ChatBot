@@ -1,12 +1,59 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, User, Copy, Check, Volume2, VolumeX, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Bot, User, Copy, Check, Volume2, VolumeX, ThumbsUp, ThumbsDown, Code2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage as ChatMessageType } from '../types/chat';
 
 interface ChatMessageProps {
   message: ChatMessageType;
 }
+
+// Custom CodeBlock Component with Language Tag & Copy Code Button
+const CodeBlock: React.FC<{ language?: string; value: string }> = ({ language, value }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-3 rounded-2xl overflow-hidden bg-[#090d16] border border-white/15 shadow-xl max-w-full w-full">
+      {/* Code Block Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-white/10 text-[11px] font-mono text-slate-400">
+        <div className="flex items-center gap-2">
+          <Code2 className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="uppercase font-bold tracking-wider text-slate-300">
+            {language || 'code'}
+          </span>
+        </div>
+        <button
+          onClick={handleCopyCode}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+          title="Copy code"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-sans font-medium text-[10px]">Copied!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5" />
+              <span className="font-sans font-medium text-[10px]">Copy code</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Code Content Area */}
+      <pre className="p-4 overflow-x-auto text-xs sm:text-[13px] font-mono leading-relaxed text-indigo-200 scrollbar-thin max-w-full">
+        <code>{value}</code>
+      </pre>
+    </div>
+  );
+};
 
 export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.sender === 'user';
@@ -46,10 +93,10 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
         damping: 30,
         mass: 0.8
       }}
-      className={`flex items-start gap-3 my-4 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+      className={`flex items-start gap-2.5 sm:gap-3 my-3.5 max-w-full ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
     >
       {/* Avatar */}
-      <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center shadow-md ${
+      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex-shrink-0 flex items-center justify-center shadow-md ${
         isUser 
           ? 'bg-gradient-to-tr from-purple-500 to-indigo-500 text-white shadow-purple-500/20' 
           : 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-indigo-200 p-0.5 shadow-indigo-500/20'
@@ -64,10 +111,10 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
       </div>
 
       {/* Bubble Container */}
-      <div className={`flex flex-col max-w-[92%] sm:max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col max-w-[88%] sm:max-w-[85%] min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Sender Name & Timestamp */}
         <div className="flex items-center gap-2 mb-1 px-1 text-[11px] text-slate-400">
-          <span className="font-semibold text-slate-300">{isUser ? 'You' : 'AI Assistant'}</span>
+          <span className="font-semibold text-slate-300">{isUser ? 'You' : 'Nexus AI'}</span>
           <span>•</span>
           <span>{message.timestamp}</span>
           {message.status === 'sending' && (
@@ -76,42 +123,56 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
         </div>
 
         {/* Card Body */}
-        <div className={`relative px-4 py-3 rounded-2xl text-sm sm:text-[15px] ${
+        <div className={`relative px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl text-sm sm:text-[15px] max-w-full overflow-hidden break-words shadow-lg ${
           isUser 
             ? 'glass-card-user text-white rounded-tr-sm' 
-            : 'glass-card-bot text-slate-100 rounded-tl-sm'
+            : 'glass-card-bot text-slate-100 rounded-tl-sm border border-white/10'
         }`}>
           {/* ReactMarkdown rendering message text with custom typography formatting */}
-          <div className="markdown-body prose prose-invert max-w-none text-slate-100 leading-relaxed text-sm sm:text-[15px]">
+          <div className="markdown-body prose prose-invert max-w-none text-slate-100 leading-relaxed text-sm sm:text-[15px] break-words overflow-hidden">
             <ReactMarkdown
               components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                p: ({ children }) => <p className="mb-2.5 last:mb-0 leading-relaxed break-words">{children}</p>,
                 strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
                 em: ({ children }) => <em className="italic text-indigo-200">{children}</em>,
-                ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1 text-slate-200">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-slate-200">{children}</ol>,
                 li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                h1: ({ children }) => <h1 className="text-lg font-extrabold text-white mt-3 mb-1.5">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-base font-bold text-white mt-2.5 mb-1">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-sm font-bold text-indigo-300 mt-2 mb-1">{children}</h3>,
+                h1: ({ children }) => <h1 className="text-lg sm:text-xl font-extrabold text-white mt-4 mb-2 border-b border-white/10 pb-1">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base sm:text-lg font-bold text-white mt-3.5 mb-1.5">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold text-indigo-300 mt-3 mb-1">{children}</h3>,
+                table: ({ children }) => (
+                  <div className="my-3 overflow-x-auto rounded-xl border border-white/15 shadow-md">
+                    <table className="w-full text-left text-xs sm:text-sm border-collapse">{children}</table>
+                  </div>
+                ),
+                thead: ({ children }) => <thead className="bg-slate-900/90 text-indigo-300 font-bold border-b border-white/10">{children}</thead>,
+                tr: ({ children }) => <tr className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">{children}</tr>,
+                th: ({ children }) => <th className="px-3.5 py-2 font-semibold">{children}</th>,
+                td: ({ children }) => <td className="px-3.5 py-2 text-slate-300">{children}</td>,
                 code: ({ className, children, ...props }: any) => {
-                  const isInline = !className && !String(children).includes('\n');
-                  return isInline ? (
-                    <code className="px-1.5 py-0.5 rounded bg-slate-900 border border-white/10 text-indigo-300 font-mono text-xs" {...props}>
+                  const match = /language-(\w+)/.exec(className || '');
+                  const language = match ? match[1] : '';
+                  const content = String(children).replace(/\n$/, '');
+                  const isMultiLine = content.includes('\n') || Boolean(match);
+
+                  if (isMultiLine) {
+                    return <CodeBlock language={language} value={content} />;
+                  }
+
+                  return (
+                    <code className="px-1.5 py-0.5 rounded-md bg-slate-900/90 border border-white/15 text-indigo-300 font-mono text-[13px] break-all inline-block" {...props}>
                       {children}
                     </code>
-                  ) : (
-                    <div className="my-2.5 rounded-xl overflow-hidden bg-slate-950 border border-white/10 text-xs font-mono">
-                      <pre className="p-3 overflow-x-auto text-emerald-300 scrollbar-thin">
-                        <code {...props}>{children}</code>
-                      </pre>
-                    </div>
                   );
                 },
                 blockquote: ({ children }) => (
-                  <blockquote className="border-l-2 border-indigo-500 pl-3 py-1 my-2 bg-indigo-950/30 text-slate-300 text-xs italic">
+                  <blockquote className="border-l-4 border-indigo-500 bg-indigo-950/30 px-3.5 py-2 my-3 rounded-r-xl text-slate-300 text-xs sm:text-sm italic">
                     {children}
                   </blockquote>
+                ),
+                img: ({ src, alt }) => (
+                  <img src={src} alt={alt} className="max-w-full h-auto rounded-xl border border-white/10 my-2.5 shadow-md" />
                 ),
               }}
             >
@@ -125,19 +186,20 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={handleCopy}
-                  className="p-1 rounded-md hover:bg-white/10 hover:text-slate-200 transition-colors flex items-center gap-1"
-                  title="Copy response"
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 hover:text-slate-200 transition-colors flex items-center gap-1"
+                  title="Copy full response"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied && <span className="text-[10px] text-emerald-400 font-medium">Copied</span>}
+                  {copied ? <span className="text-[10px] text-emerald-400 font-medium">Copied</span> : <span className="text-[10px]">Copy</span>}
                 </button>
 
                 <button
                   onClick={handleSpeak}
-                  className={`p-1 rounded-md hover:bg-white/10 transition-colors ${speaking ? 'text-indigo-400' : 'hover:text-slate-200'}`}
+                  className={`px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-1 ${speaking ? 'text-indigo-400 bg-indigo-500/10' : 'hover:text-slate-200'}`}
                   title={speaking ? "Stop reading" : "Read aloud"}
                 >
                   {speaking ? <VolumeX className="w-3.5 h-3.5 animate-pulse" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  <span className="text-[10px]">{speaking ? 'Stop' : 'Listen'}</span>
                 </button>
               </div>
 
@@ -145,14 +207,14 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setLiked(liked === true ? null : true)}
-                  className={`p-1 rounded-md hover:bg-white/10 transition-colors ${liked === true ? 'text-emerald-400' : 'hover:text-slate-200'}`}
+                  className={`p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors ${liked === true ? 'text-emerald-400 bg-emerald-500/10' : 'hover:text-slate-200'}`}
                   title="Good response"
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setLiked(liked === false ? null : false)}
-                  className={`p-1 rounded-md hover:bg-white/10 transition-colors ${liked === false ? 'text-rose-400' : 'hover:text-slate-200'}`}
+                  className={`p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors ${liked === false ? 'text-rose-400 bg-rose-500/10' : 'hover:text-slate-200'}`}
                   title="Poor response"
                 >
                   <ThumbsDown className="w-3.5 h-3.5" />

@@ -38,17 +38,17 @@ const DEFAULT_CHIPS: QuickChipItem[] = [
 export const QuickChips: React.FC<QuickChipsProps> = ({ onSelectChip, disabled }) => {
   const getIcon = (name?: string) => {
     switch (name) {
-      case 'Lightbulb': return <Lightbulb className="w-3.5 h-3.5 text-amber-400" />;
-      case 'FileText': return <FileText className="w-3.5 h-3.5 text-indigo-400" />;
-      case 'Code': return <Code className="w-3.5 h-3.5 text-emerald-400" />;
-      case 'Compass': return <Compass className="w-3.5 h-3.5 text-purple-400" />;
-      default: return <Sparkles className="w-3.5 h-3.5 text-pink-400" />;
+      case 'Lightbulb': return <Lightbulb className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />;
+      case 'FileText': return <FileText className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />;
+      case 'Code': return <Code className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />;
+      case 'Compass': return <Compass className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />;
+      default: return <Sparkles className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />;
     }
   };
 
   return (
-    <div className="w-full py-1">
-      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 max-w-3xl mx-auto">
+    <div className="w-full py-1 overflow-hidden">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1 max-w-3xl mx-auto sm:flex-wrap sm:justify-center">
         {DEFAULT_CHIPS.map((chip, index) => (
           <motion.button
             key={chip.id}
@@ -59,7 +59,7 @@ export const QuickChips: React.FC<QuickChipsProps> = ({ onSelectChip, disabled }
             whileTap={{ scale: disabled ? 1 : 0.96 }}
             onClick={() => !disabled && onSelectChip(chip.promptText)}
             disabled={disabled}
-            className={`glass-chip flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-200 border border-white/10 shadow-sm transition-all ${
+            className={`glass-chip flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-200 border border-white/10 shadow-sm transition-all whitespace-nowrap flex-shrink-0 ${
               disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-white hover:border-indigo-500/40 hover:bg-slate-800/90'
             }`}
           >
