@@ -34,9 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Lock body scroll when sidebar drawer is open on mobile
+  // Lock body scroll when sidebar drawer is open ONLY on mobile (<768px)
   useEffect(() => {
-    if (isOpen) {
+    const isMobile = window.innerWidth < 768;
+    if (isOpen && isMobile) {
       document.body.style.overflow = 'hidden';
       document.documentElement.style.overflow = 'hidden';
     } else {

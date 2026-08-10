@@ -102,7 +102,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Robust session loader: Syncs remote database data with isolated local cache
+  // Robust session loader: Syncs remote database data and opens a NEW chat canvas on login (ChatGPT style)
   const loadUserSessions = async (userId: string) => {
     const userStorageKey = getUserStorageKey(userId);
     const userActiveKey = getUserActiveKey(userId);
@@ -128,27 +128,25 @@ export const App: React.FC = () => {
       }
     }
 
-    let activeId = localStorage.getItem(userActiveKey) || '';
+    // 3. Always open a fresh, clean empty chat session upon login (ChatGPT behavior)
+    const newSessionId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : `session_${Date.now()}`;
+      
+    const freshSession: ChatSession = {
+      id: newSessionId,
+      title: 'New Conversation',
+      createdAt: new Date().toISOString(),
+      messages: [],
+    };
 
-    // 3. If zero sessions found anywhere, create initial clean conversation
-    if (loadedSessions.length === 0) {
-      const newId = typeof crypto !== 'undefined' && crypto.randomUUID 
-        ? crypto.randomUUID() 
-        : `session_${Date.now()}`;
-      loadedSessions = [{
-        id: newId,
-        title: 'New Conversation',
-        createdAt: new Date().toISOString(),
-        messages: [],
-      }];
-      activeId = newId;
-    } else if (!activeId || !loadedSessions.some((s) => s.id === activeId)) {
-      activeId = loadedSessions[0].id;
-    }
+    // Filter out previous empty placeholder sessions to keep sidebar clean
+    const previousNonEmpty = loadedSessions.filter((s) => s.messages.length > 0);
+    const finalSessions = [freshSession, ...previousNonEmpty];
 
-    setSessions(loadedSessions);
-    setCurrentSessionId(activeId);
-    localStorage.setItem(userActiveKey, activeId);
+    setSessions(finalSessions);
+    setCurrentSessionId(newSessionId);
+    localStorage.setItem(userActiveKey, newSessionId);
   };
 
   const handleGuestInit = () => {
@@ -164,21 +162,23 @@ export const App: React.FC = () => {
       }
     }
 
-    if (guestSessions.length === 0) {
-      const guestId = typeof crypto !== 'undefined' && crypto.randomUUID 
-        ? crypto.randomUUID() 
-        : `session_${Date.now()}`;
-      guestSessions = [{
-        id: guestId,
-        title: 'New Conversation',
-        createdAt: new Date().toISOString(),
-        messages: [],
-      }];
-    }
+    // Filter out empty sessions
+    const previousNonEmptyGuest = guestSessions.filter((s) => s.messages.length > 0);
+
+    const guestId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : `session_${Date.now()}`;
+      
+    const freshGuestSession: ChatSession = {
+      id: guestId,
+      title: 'New Conversation',
+      createdAt: new Date().toISOString(),
+      messages: [],
+    };
 
     setUser(null);
-    setSessions(guestSessions);
-    setCurrentSessionId(guestSessions[0].id);
+    setSessions([freshGuestSession, ...previousNonEmptyGuest]);
+    setCurrentSessionId(guestId);
   };
 
   // Sync sessions to user-isolated LocalStorage & Supabase DB on updates
