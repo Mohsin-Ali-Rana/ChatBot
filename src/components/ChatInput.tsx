@@ -41,12 +41,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, 
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto px-1 sm:px-0">
       <form onSubmit={handleSubmit} className="relative">
-        {/* Main Floating Glass Input Console */}
-        <div className="relative rounded-3xl bg-[#0f172a]/90 backdrop-blur-2xl border border-white/15 focus-within:border-indigo-500/60 focus-within:ring-4 focus-within:ring-indigo-500/15 shadow-2xl transition-all duration-300 overflow-hidden p-3 sm:p-4">
+        {/* Futuristic Floating Glass Input Capsule */}
+        <div className="relative rounded-3xl bg-[#0f172a]/85 backdrop-blur-2xl border border-indigo-500/20 hover:border-indigo-500/40 focus-within:border-indigo-500/70 focus-within:ring-4 focus-within:ring-indigo-500/20 shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_25px_rgba(99,102,241,0.15)] transition-all duration-300 overflow-hidden p-3 sm:p-4">
           
-          {/* Subtle Ambient Background Gradient */}
+          {/* Ambient Glow Subtle Highlight */}
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 pointer-events-none" />
 
           {/* Text Area Input */}
@@ -131,8 +131,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, 
           </div>
         </div>
 
-        {/* Footer info line */}
-        <div className="flex items-center justify-between px-3 mt-2 text-[10px] text-slate-400">
+        {/* Clean floating disclaimer text without black box background */}
+        <div className="text-center mt-2.5 text-[11px] text-slate-400/80 font-medium tracking-wide">
           <span>Nexus AI may produce inaccurate info. Verify key details.</span>
         </div>
       </form>

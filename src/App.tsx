@@ -18,6 +18,7 @@ import {
   supabase, 
   fetchUserSessionsFromSupabase, 
   saveUserSessionToSupabase, 
+  saveChatMessageToSupabase,
   deleteUserSessionFromSupabase 
 } from './lib/supabase';
 
@@ -41,7 +42,7 @@ export const App: React.FC = () => {
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // 1. Initial Load: Authenticate User & Load Sessions from Supabase
+  // 1. Initial Load: Authenticate User & Load History from Supabase 'chat_history'
   useEffect(() => {
     window.scrollTo(0, 0);
 
@@ -106,12 +107,12 @@ export const App: React.FC = () => {
     const userStorageKey = getUserStorageKey(userId);
     const userActiveKey = getUserActiveKey(userId);
 
-    // 1. Query Supabase remote database first
+    // 1. Query Supabase 'chat_history' remote database first
     const remoteSessions = await fetchUserSessionsFromSupabase(userId);
     let loadedSessions: ChatSession[] = [];
 
     if (remoteSessions && remoteSessions.length > 0) {
-      console.log('✅ Synchronized remote sessions from Supabase:', remoteSessions.length);
+      console.log('✅ Synchronized remote sessions from chat_history:', remoteSessions.length);
       loadedSessions = remoteSessions;
       localStorage.setItem(userStorageKey, JSON.stringify(remoteSessions));
     } else {
@@ -338,17 +339,25 @@ export const App: React.FC = () => {
     return String(data);
   };
 
-  // Send Message Handler
+  // Send Message Handler - Immediately Inserts Message Rows into Supabase 'chat_history'
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
 
+    const userMsgId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+      ? crypto.randomUUID() 
+      : `msg_${Date.now()}_user`;
+
     const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}_user`,
+      id: userMsgId,
       sender: 'user',
       text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       status: 'sent',
     };
+
+    if (user) {
+      saveChatMessageToSupabase(user.id, userMessage);
+    }
 
     setSessions((prevSessions) =>
       prevSessions.map((session) => {
@@ -389,12 +398,20 @@ export const App: React.FC = () => {
         const responseText = parseResponseText(data);
 
         if (responseText) {
+          const botMsgId = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : `msg_${Date.now()}_bot`;
+
           const botMessage: ChatMessage = {
-            id: `msg_${Date.now()}_bot`,
+            id: botMsgId,
             sender: 'bot',
             text: responseText,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           };
+
+          if (user) {
+            saveChatMessageToSupabase(user.id, botMessage);
+          }
 
           setSessions((prevSessions) =>
             prevSessions.map((session) => {
@@ -496,7 +513,7 @@ export const App: React.FC = () => {
             </div>
 
             {/* Sticky Input Bar at Bottom during active conversation */}
-            <div className="sticky bottom-0 bg-[#0b0f19]/90 backdrop-blur-xl pt-2 pb-2 mt-auto border-t border-white/5">
+            <div className="sticky bottom-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/90 to-transparent pt-4 pb-3 mt-auto w-full z-20">
               <ChatInput
                 onSendMessage={handleSendMessage}
                 isLoading={isLoading}

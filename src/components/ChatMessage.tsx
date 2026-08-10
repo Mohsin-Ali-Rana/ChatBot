@@ -8,20 +8,110 @@ interface ChatMessageProps {
   message: ChatMessageType;
 }
 
+const LANG_REGEX = /^(python|javascript|js|typescript|ts|html|css|json|sql|bash|cpp|c|java|go|rust|php|ruby)\s+/i;
+const CODE_KEYWORDS_REGEX = /(def\s+\w+|function\s+\w+|const\s+\w+|let\s+\w+|class\s+\w+|import\s+.*from|return\s+.*|print\(|console\.log\()/;
+
+// Preprocess raw text from webhook: unescape \n and handle raw code outputs
+const preprocessMarkdownText = (rawText: string): string => {
+  if (!rawText) return '';
+
+  // 1. Unescape literal \n strings if present in webhook output
+  let text = rawText.replace(/\\n/g, '\n');
+
+  // 2. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
+  const trimmed = text.trim();
+  if (!text.includes('```') && (LANG_REGEX.test(trimmed) || CODE_KEYWORDS_REGEX.test(trimmed))) {
+    const langMatch = trimmed.match(LANG_REGEX);
+    const lang = langMatch ? langMatch[1] : '';
+    const cleanCode = langMatch ? trimmed.slice(langMatch[0].length) : trimmed;
+    return `\n\`\`\`${lang}\n${cleanCode}\n\`\`\`\n`;
+  }
+
+  return text;
+};
+
+// ChatGPT-Quality Dynamic Code Beautifier & Indentation Engine
+const formatCodeText = (code: string): string => {
+  if (!code) return '';
+
+  let raw = code.replace(/\\n/g, '\n').trim();
+
+  // Step 1: Separate code keywords and definitions smashed onto comment lines
+  // e.g. "... function to add two numbers def add_numbers(a, b):" -> "... function to add two numbers\ndef add_numbers(a, b):"
+  raw = raw.replace(/([#\/\/].*?)\s+(?=(\bdef\b|\bclass\b|\bfunction\b|\bconst\b|\blet\b|\bvar\b|\breturn\b|\bprint\(|\bconsole\.log\(|\b[a-zA-Z_]\w*\s*=))/g, '$1\n');
+
+  // Step 2: Separate inline return statements & code following comments
+  // e.g. "return the result return a + b" -> "return the result\nreturn a + b"
+  // e.g. "return a + b # Example usage" -> "return a + b\n# Example usage"
+  raw = raw.replace(/(return\s+[^#\n;]+?)\s+(?=(return\b|print\(|console\.log\(|#|\/\/|\b[a-zA-Z_]\w*\s*=|\bdef\b|\bclass\b))/g, '$1\n');
+
+  // Step 3: Separate variable assignments smashed together
+  // e.g. "num1 = 5 # Assign the first number num2 = 7" -> "num1 = 5\n# Assign the first number\nnum2 = 7"
+  raw = raw.replace(/([#\/\/].*?)\s+(?=\b[a-zA-Z_]\w*\s*=)/g, '$1\n');
+  raw = raw.replace(/(\b[a-zA-Z_]\w*\s*=\s*(?:'[^']*'|"[^"]*"|\d+|\b\w+\([^)]*\)|\b\w+))\s+(?=[a-zA-Z_]\w*\s*=|#|\/\/|print\(|console\.log\()/g, '$1\n');
+
+  // Step 4: Rejoin comment lines split mid-sentence across newlines (e.g., "# Define a\nfunction to add two numbers")
+  raw = raw.replace(/([#\/\/]\s*[A-Z][a-z0-9\s]*?)\n([a-z][a-z0-9\s,]+?)(?=\s+def\b|\s+return\b|\s+#|\s+\/\/|\n|$)/gi, (match, p1, p2) => {
+    if (!CODE_KEYWORDS_REGEX.test(p2) && !p2.includes('=')) {
+      return `${p1} ${p2.trim()}`;
+    }
+    return match;
+  });
+
+  // Step 5: Build dynamic indentation for Python and JavaScript blocks
+  const rawLines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const resultLines: string[] = [];
+  let indent = 0;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+
+    // Dedent for closing braces or else/elif/except
+    if (/^(\}|\]|\)|else:|elif\b|except\b|finally:)/.test(line)) {
+      indent = Math.max(0, indent - 1);
+    }
+
+    // Apply 4-space indentation per level
+    const paddedLine = '    '.repeat(indent) + line;
+    resultLines.push(paddedLine);
+
+    // Increase indent after block headers (ending in ':' or '{')
+    if (
+      /:\s*$/.test(line) ||
+      /:\s*(#|\/\/)/.test(line) ||
+      /\{\s*$/.test(line) ||
+      /^\s*(def|class|function|if|for|while|try|except|else|elif|with)\b/.test(line)
+    ) {
+      if (!/:\s*return\b/.test(line) && !/;\s*$/.test(line) && !/\{\s*\}/.test(line)) {
+        indent++;
+      }
+    }
+
+    // Reset indent after return statement at top level
+    if (/^\s*return\b/.test(line) && indent > 0 && i < rawLines.length - 1 && /^(#|\/\/|[a-zA-Z_]\w*\s*=)/.test(rawLines[i + 1])) {
+      indent = Math.max(0, indent - 1);
+    }
+  }
+
+  return resultLines.join('\n');
+};
+
 // Custom CodeBlock Component with Language Tag & Copy Code Button
 const CodeBlock: React.FC<{ language?: string; value: string }> = ({ language, value }) => {
   const [copied, setCopied] = useState(false);
 
+  const formattedCode = formatCodeText(value);
+
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(value);
+    navigator.clipboard.writeText(formattedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="my-3 rounded-2xl overflow-hidden bg-[#090d16] border border-white/15 shadow-xl max-w-full w-full">
+    <div className="my-3.5 rounded-2xl overflow-hidden bg-[#090d16] border border-white/15 shadow-xl max-w-full w-full">
       {/* Code Block Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-900/90 border-b border-white/10 text-[11px] font-mono text-slate-400">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-900/90 border-b border-white/10 text-[11px] font-mono text-slate-400">
         <div className="flex items-center gap-2">
           <Code2 className="w-3.5 h-3.5 text-indigo-400" />
           <span className="uppercase font-bold tracking-wider text-slate-300">
@@ -30,7 +120,7 @@ const CodeBlock: React.FC<{ language?: string; value: string }> = ({ language, v
         </div>
         <button
           onClick={handleCopyCode}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors"
           title="Copy code"
         >
           {copied ? (
@@ -47,9 +137,9 @@ const CodeBlock: React.FC<{ language?: string; value: string }> = ({ language, v
         </button>
       </div>
 
-      {/* Code Content Area */}
-      <pre className="p-4 overflow-x-auto text-xs sm:text-[13px] font-mono leading-relaxed text-indigo-200 scrollbar-thin max-w-full">
-        <code>{value}</code>
+      {/* Code Content Area - Always wraps lines cleanly with whitespace-pre-wrap & break-words */}
+      <pre className="p-4 text-xs sm:text-[13px] font-mono leading-relaxed text-indigo-200 scrollbar-thin max-w-full whitespace-pre-wrap break-words overflow-x-auto">
+        <code>{formattedCode}</code>
       </pre>
     </div>
   );
@@ -60,6 +150,8 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
   const [copied, setCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [liked, setLiked] = useState<boolean | null>(null);
+
+  const processedText = preprocessMarkdownText(message.text);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.text);
@@ -140,7 +232,7 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
                 li: ({ children }) => <li className="leading-relaxed">{children}</li>,
                 h1: ({ children }) => <h1 className="text-lg sm:text-xl font-extrabold text-white mt-4 mb-2 border-b border-white/10 pb-1">{children}</h1>,
                 h2: ({ children }) => <h2 className="text-base sm:text-lg font-bold text-white mt-3.5 mb-1.5">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold text-indigo-300 mt-3 mb-1">{children}</h3>,
+                h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold text-indigo-300 mt-3.5 mb-1.5">{children}</h3>,
                 table: ({ children }) => (
                   <div className="my-3 overflow-x-auto rounded-xl border border-white/15 shadow-md">
                     <table className="w-full text-left text-xs sm:text-sm border-collapse">{children}</table>
@@ -151,13 +243,26 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
                 th: ({ children }) => <th className="px-3.5 py-2 font-semibold">{children}</th>,
                 td: ({ children }) => <td className="px-3.5 py-2 text-slate-300">{children}</td>,
                 code: ({ className, children, ...props }: any) => {
+                  const rawContent = String(children).replace(/\n$/, '');
                   const match = /language-(\w+)/.exec(className || '');
-                  const language = match ? match[1] : '';
-                  const content = String(children).replace(/\n$/, '');
-                  const isMultiLine = content.includes('\n') || Boolean(match);
+                  let language = match ? match[1] : '';
+                  let content = rawContent;
+
+                  // Check if content starts with a language keyword (e.g., "python def ...")
+                  const langPrefixMatch = content.match(LANG_REGEX);
+                  if (langPrefixMatch) {
+                    if (!language) language = langPrefixMatch[1];
+                    content = content.slice(langPrefixMatch[0].length);
+                  }
+
+                  const isMultiLine = rawContent.includes('\n') || 
+                                      Boolean(match) || 
+                                      Boolean(langPrefixMatch) || 
+                                      CODE_KEYWORDS_REGEX.test(rawContent) ||
+                                      rawContent.length > 40;
 
                   if (isMultiLine) {
-                    return <CodeBlock language={language} value={content} />;
+                    return <CodeBlock language={language || 'code'} value={content} />;
                   }
 
                   return (
@@ -176,7 +281,7 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
                 ),
               }}
             >
-              {message.text}
+              {processedText}
             </ReactMarkdown>
           </div>
 
