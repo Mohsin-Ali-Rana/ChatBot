@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
-import { ChatHeader } from './components/ChatHeader';
-import { Sidebar } from './components/Sidebar';
-import { ChatMessageComponent } from './components/ChatMessage';
-import { ChatInput } from './components/ChatInput';
-import { TypingIndicator } from './components/TypingIndicator';
-import { WelcomeState } from './components/WelcomeState';
-import { AuthModal } from './components/AuthModal';
-import { Toast } from './components/Toast';
+import {
+  ChatHeader,
+  Sidebar,
+  ChatMessageComponent,
+  ChatInput,
+  TypingIndicator,
+  WelcomeState,
+  AuthModal,
+  Toast,
+} from './components';
 
 import { ChatMessage, ChatSession, UserProfile, ToastAlert } from './types/chat';
 import { 
