@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, Plus, Search, Trash2, Crown, User, LogOut, 
-  ChevronLeft, Sparkles, Settings, ShieldCheck 
+  ChevronLeft, ShieldCheck 
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types/chat';
+import { NexusLogo } from './NexusLogo';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,7 +18,6 @@ interface SidebarProps {
   user: UserProfile | null;
   onOpenAuth: () => void;
   onLogout: () => void;
-  onOpenSettings: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -31,7 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   user,
   onOpenAuth,
   onLogout,
-  onOpenSettings,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -41,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Mobile backdrop overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -54,29 +53,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Sidebar Panel */}
+      {/* Sidebar Drawer */}
       <motion.aside
         initial={false}
         animate={{
-          width: isOpen ? 280 : 0,
+          x: isOpen ? 0 : -280,
           opacity: isOpen ? 1 : 0,
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className={`fixed top-0 left-0 bottom-0 z-40 h-full bg-[#0d1322]/95 border-r border-white/10 backdrop-blur-2xl flex flex-col justify-between overflow-hidden shadow-2xl ${
-          isOpen ? 'w-[280px]' : 'w-0 pointer-events-none'
-        }`}
+        className="fixed top-0 left-0 bottom-0 z-40 h-full w-[280px] bg-[#0d1322]/95 border-r border-white/10 backdrop-blur-2xl flex flex-col justify-between overflow-hidden shadow-2xl"
       >
         <div className="p-4 flex flex-col h-full min-w-[280px]">
           {/* Header Branding + Hide Button */}
           <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-md shadow-indigo-500/30">
-                <div className="w-full h-full bg-slate-950/90 rounded-[10px] flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-indigo-400" />
-                </div>
-              </div>
-              <span className="font-extrabold text-white text-base tracking-tight">Nexus AI</span>
-            </div>
+            <NexusLogo size="sm" showText={true} />
 
             <button
               onClick={onToggle}
@@ -155,7 +145,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="truncate">{session.title}</span>
                     </div>
 
-                    {/* Delete button ALWAYS visible on hover for any session */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -208,14 +197,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>Sign In / Register</span>
               </button>
             )}
-
-            <button
-              onClick={onOpenSettings}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
 
             {user && (
               <button

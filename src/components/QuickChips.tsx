@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Code, FileText, Lightbulb, Compass, Zap } from 'lucide-react';
+import { Sparkles, Code, FileText, Lightbulb, Compass } from 'lucide-react';
 import { QuickChipItem } from '../types/chat';
 
 interface QuickChipsProps {
@@ -47,20 +47,20 @@ export const QuickChips: React.FC<QuickChipsProps> = ({ onSelectChip, disabled }
   };
 
   return (
-    <div className="w-full py-2 px-1">
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 px-1">
+    <div className="w-full py-1">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 max-w-3xl mx-auto">
         {DEFAULT_CHIPS.map((chip, index) => (
           <motion.button
             key={chip.id}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: index * 0.05 }}
-            whileHover={{ scale: disabled ? 1 : 1.03 }}
+            transition={{ duration: 0.25, delay: index * 0.04 }}
+            whileHover={{ scale: disabled ? 1 : 1.03, y: -1 }}
             whileTap={{ scale: disabled ? 1 : 0.96 }}
             onClick={() => !disabled && onSelectChip(chip.promptText)}
             disabled={disabled}
-            className={`glass-chip flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap text-slate-200 border border-white/10 ${
-              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-white'
+            className={`glass-chip flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-200 border border-white/10 shadow-sm transition-all ${
+              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-white hover:border-indigo-500/40 hover:bg-slate-800/90'
             }`}
           >
             {getIcon(chip.iconName)}

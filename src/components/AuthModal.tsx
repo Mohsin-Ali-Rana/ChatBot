@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, Eye, EyeOff, Sparkles, ArrowRight, AlertTriangle } from 'lucide-react';
 import { UserProfile } from '../types/chat';
+import { supabase } from '../lib/supabase';
+import { NexusLogo } from './NexusLogo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -66,47 +68,84 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
     setIsLoading(true);
 
     try {
-      const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
-      const payload = isSignUp
-        ? { name: name.trim(), email: email.trim(), password }
-        : { email: email.trim(), password };
+      if (isSignUp) {
+        // Supabase Auth Sign Up
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              name: name.trim(),
+              avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name.trim())}`,
+            },
+          },
+        });
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        if (signUpError) {
+          throw new Error(signUpError.message);
+        }
 
-      const data = await response.json();
+        const user = data.user;
+        const session = data.session;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Authentication failed. Please check your details.');
+        if (!user) {
+          throw new Error('Sign up failed. Please check your information and try again.');
+        }
+
+        const userName = name.trim() || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+        const userAvatar = user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`;
+
+        const authenticatedUser: UserProfile = {
+          id: user.id,
+          name: userName,
+          email: user.email || email.trim(),
+          avatarUrl: userAvatar,
+          isPro: true,
+        };
+
+        const token = session?.access_token || `sb_token_${user.id}`;
+
+        resetForm();
+        onLoginSuccess(authenticatedUser, token);
+        onClose();
+      } else {
+        // Supabase Auth Sign In
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (signInError) {
+          throw new Error(signInError.message);
+        }
+
+        const user = data.user;
+        const session = data.session;
+
+        if (!user) {
+          throw new Error('Sign in failed. User record not found.');
+        }
+
+        const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+        const userAvatar = user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`;
+
+        const authenticatedUser: UserProfile = {
+          id: user.id,
+          name: userName,
+          email: user.email || email.trim(),
+          avatarUrl: userAvatar,
+          isPro: true,
+        };
+
+        const token = session?.access_token || `sb_token_${user.id}`;
+
+        resetForm();
+        onLoginSuccess(authenticatedUser, token);
+        onClose();
       }
-
-      // Authentication Success
-      const authenticatedUser: UserProfile = {
-        id: data.user.id || data.user._id,
-        name: data.user.name,
-        email: data.user.email,
-        avatarUrl: data.user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.user.email)}`,
-        isPro: true,
-      };
-
-      // Store JWT token
-      if (data.token) {
-        localStorage.setItem('nexus_token', data.token);
-      }
-
-      // Clear sensitive form state on success
-      resetForm();
-
-      onLoginSuccess(authenticatedUser, data.token);
-      onClose();
     } catch (err: any) {
-      console.error('Auth Request Error:', err);
-      setError(err.message || 'Server connection error. Please try again.');
+      console.error('Supabase Auth Error:', err);
+      setError(err.message || 'Authentication error. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -141,11 +180,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
           </button>
 
           {/* Header */}
-          <div className="text-center mb-3 sm:mb-4 flex-shrink-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 p-0.5 mx-auto mb-2 shadow-lg shadow-indigo-500/30">
-              <div className="w-full h-full bg-slate-950/90 rounded-[14px] flex items-center justify-center">
-                <Sparkles className="w-4.5 h-4.5 text-indigo-400" />
-              </div>
+          <div className="text-center mb-3 sm:mb-4 flex-shrink-0 flex flex-col items-center">
+            <div className="mb-2">
+              <NexusLogo size="md" showText={false} />
             </div>
 
             <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">

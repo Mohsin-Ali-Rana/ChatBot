@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, User, Copy, Check, Volume2, VolumeX, ThumbsUp, ThumbsDown } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage as ChatMessageType } from '../types/chat';
 
 interface ChatMessageProps {
@@ -25,7 +26,7 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
         window.speechSynthesis.cancel();
         setSpeaking(false);
       } else {
-        window.speechSynthesis.cancel(); // clear previous
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(message.text);
         utterance.onend = () => setSpeaking(false);
         utterance.onerror = () => setSpeaking(false);
@@ -33,36 +34,6 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
         setSpeaking(true);
       }
     }
-  };
-
-  // Helper to render basic markdown-style formatting (bold, code blocks, lists)
-  const renderFormattedText = (content: string) => {
-    // If text contains code blocks with backticks
-    if (content.includes('```')) {
-      const parts = content.split(/(```[\s\S]*?```)/g);
-      return parts.map((part, idx) => {
-        if (part.startsWith('```')) {
-          const match = part.match(/^```(\w*)\n?([\s\S]*?)```$/);
-          const lang = match ? match[1] : '';
-          const code = match ? match[2] : part.slice(3, -3);
-          return (
-            <div key={idx} className="my-2 rounded-xl overflow-hidden bg-slate-950 border border-white/10 text-xs font-mono">
-              {lang && (
-                <div className="bg-slate-900/90 px-3 py-1 text-[10px] text-slate-400 border-b border-white/5 font-bold uppercase tracking-wider">
-                  {lang}
-                </div>
-              )}
-              <pre className="p-3 overflow-x-auto text-emerald-300">
-                <code>{code.trim()}</code>
-              </pre>
-            </div>
-          );
-        }
-        return <p key={idx} className="whitespace-pre-wrap">{part}</p>;
-      });
-    }
-
-    return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
   };
 
   return (
@@ -93,7 +64,7 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
       </div>
 
       {/* Bubble Container */}
-      <div className={`flex flex-col max-w-[85%] sm:max-w-[78%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col max-w-[92%] sm:max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         {/* Sender Name & Timestamp */}
         <div className="flex items-center gap-2 mb-1 px-1 text-[11px] text-slate-400">
           <span className="font-semibold text-slate-300">{isUser ? 'You' : 'AI Assistant'}</span>
@@ -110,7 +81,43 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
             ? 'glass-card-user text-white rounded-tr-sm' 
             : 'glass-card-bot text-slate-100 rounded-tl-sm'
         }`}>
-          {renderFormattedText(message.text)}
+          {/* ReactMarkdown rendering message text with custom typography formatting */}
+          <div className="markdown-body prose prose-invert max-w-none text-slate-100 leading-relaxed text-sm sm:text-[15px]">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                em: ({ children }) => <em className="italic text-indigo-200">{children}</em>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                h1: ({ children }) => <h1 className="text-lg font-extrabold text-white mt-3 mb-1.5">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base font-bold text-white mt-2.5 mb-1">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-bold text-indigo-300 mt-2 mb-1">{children}</h3>,
+                code: ({ className, children, ...props }: any) => {
+                  const isInline = !className && !String(children).includes('\n');
+                  return isInline ? (
+                    <code className="px-1.5 py-0.5 rounded bg-slate-900 border border-white/10 text-indigo-300 font-mono text-xs" {...props}>
+                      {children}
+                    </code>
+                  ) : (
+                    <div className="my-2.5 rounded-xl overflow-hidden bg-slate-950 border border-white/10 text-xs font-mono">
+                      <pre className="p-3 overflow-x-auto text-emerald-300 scrollbar-thin">
+                        <code {...props}>{children}</code>
+                      </pre>
+                    </div>
+                  );
+                },
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-indigo-500 pl-3 py-1 my-2 bg-indigo-950/30 text-slate-300 text-xs italic">
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {message.text}
+            </ReactMarkdown>
+          </div>
 
           {/* Action Buttons for Bot Responses */}
           {!isUser && (

@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nexus_ai';
-const JWT_SECRET = process.env.JWT_SECRET || 'nexus_ai_super_secret_jwt_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_jwt_secret_in_production';
 
 // Middleware
 app.use(cors());

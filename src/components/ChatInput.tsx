@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Paperclip, Mic, ArrowUp, Globe, Sparkles, Plus, Image as ImageIcon } from 'lucide-react';
+import { Mic, ArrowUp, Globe, Plus } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
@@ -133,9 +133,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }
         {/* Footer info line */}
         <div className="flex items-center justify-between px-3 mt-2 text-[10px] text-slate-400">
           <span>Nexus AI may produce inaccurate info. Verify key details.</span>
-          <span className="flex items-center gap-1 font-medium text-slate-400">
-            <Sparkles className="w-2.5 h-2.5 text-purple-400" /> Powered by Gemini & GPT-4o
-          </span>
         </div>
       </form>
     </div>
