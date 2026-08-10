@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, Plus, Search, Trash2, Crown, User, LogOut, 
@@ -34,13 +34,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Lock body scroll when sidebar drawer is open on mobile
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const filteredSessions = sessions.filter((s) =>
     s.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <>
-      {/* Mobile backdrop overlay */}
+      {/* Mobile backdrop overlay with touch-none to block background scrolling */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -48,7 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onToggle}
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-40 md:hidden touch-none"
           />
         )}
       </AnimatePresence>
@@ -79,7 +95,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* New Chat Button */}
           <button
-            onClick={onNewChat}
+            onClick={() => {
+              onNewChat();
+              if (window.innerWidth < 768) {
+                onToggle();
+              }
+            }}
             className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition-all mb-4"
           >
             <Plus className="w-4 h-4" />
@@ -108,7 +129,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   Sign in to save chat history across devices.
                 </span>
                 <button
-                  onClick={onOpenAuth}
+                  onClick={() => {
+                    onOpenAuth();
+                    if (window.innerWidth < 768) {
+                      onToggle();
+                    }
+                  }}
                   className="mt-1.5 font-bold text-indigo-400 hover:underline flex items-center gap-1"
                 >
                   Sign In / Register &rarr;
@@ -133,7 +159,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 return (
                   <div
                     key={session.id}
-                    onClick={() => onSelectSession(session.id)}
+                    onClick={() => {
+                      onSelectSession(session.id);
+                      if (window.innerWidth < 768) {
+                        onToggle();
+                      }
+                    }}
                     className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all ${
                       isActive
                         ? 'bg-gradient-to-r from-indigo-600/30 to-purple-600/30 text-white border border-indigo-500/40 shadow-sm'
@@ -190,7 +221,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             ) : (
               <button
-                onClick={onOpenAuth}
+                onClick={() => {
+                  onOpenAuth();
+                  if (window.innerWidth < 768) {
+                    onToggle();
+                  }
+                }}
                 className="flex-1 flex items-center gap-2 text-xs font-semibold text-slate-200 hover:text-white py-1.5 px-2 rounded-xl hover:bg-white/5 transition-colors"
               >
                 <User className="w-4 h-4 text-indigo-400" />

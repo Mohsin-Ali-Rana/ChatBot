@@ -402,7 +402,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className={`relative min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col justify-between selection:bg-indigo-500/30 transition-all duration-300 ${sidebarOpen ? 'md:pl-[280px]' : ''}`}>
+    <div className={`relative min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col justify-between selection:bg-indigo-500/30 transition-all duration-300 ${sidebarOpen ? 'md:pl-[280px] overflow-hidden max-h-screen md:max-h-none md:overflow-visible' : ''}`}>
       
       {/* Background Ambient Radial Glow Blobs */}
       <div className="fixed top-[-10%] left-[-10%] w-[550px] h-[550px] rounded-full bg-indigo-600/15 blur-[130px] pointer-events-none animate-glow-1 z-0" />
