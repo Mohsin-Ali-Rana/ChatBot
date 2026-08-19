@@ -11,14 +11,19 @@ interface ChatMessageProps {
 const LANG_REGEX = /^(python|javascript|js|typescript|ts|html|css|json|sql|bash|cpp|c|java|go|rust|php|ruby)\s+/i;
 const CODE_KEYWORDS_REGEX = /(def\s+\w+|function\s+\w+|const\s+\w+|let\s+\w+|class\s+\w+|import\s+.*from|return\s+.*|print\(|console\.log\()/;
 
-// Preprocess raw text from webhook: unescape \n, split squished inline/mid-sentence lists into block lists, and handle raw code outputs
+// Preprocess raw text from AI webhooks: unescape \n, normalize Unicode symbols/dashes/bullets, split squished inline lists across sentence boundaries, and format code outputs
 const preprocessMarkdownText = (rawText: string): string => {
   if (!rawText) return '';
 
   // 1. Unescape literal \n strings if present in webhook output
   let text = rawText.replace(/\\n/g, '\n');
 
-  // 2. Process text outside of code blocks to prevent breaking code contents
+  // 2. Normalize Unicode whitespace, dashes, and bullet characters across raw text
+  text = text.replace(/[\u00A0\u2000-\u200B]/g, ' ');
+  text = text.replace(/[\u2010-\u2015\u2212]/g, '-');
+  text = text.replace(/[\u2022\u25CF\u25CB\u25C6\u25C7\u25AA\u25AB\u2043\u2023]/g, '- ');
+
+  // 3. Process text outside of code blocks to prevent breaking code contents
   const codeBlockParts = text.split(/(```[\s\S]*?```)/g);
 
   const processedParts = codeBlockParts.map((part, index) => {
@@ -27,31 +32,33 @@ const preprocessMarkdownText = (rawText: string): string => {
 
     let cleanPart = part;
 
-    // A. Bullet symbols (•, ⁃, ‣, ▪, ▫) -> convert to double newline + markdown dash bullet
-    cleanPart = cleanPart.replace(/([^\n])\s*[•⁃‣▪▫]\s*/g, '$1\n\n- ');
-    cleanPart = cleanPart.replace(/^[•⁃‣▪▫]\s*/gm, '- ');
+    // A. Split inline dashes/bullets following sentence punctuation (. - , ! - , ? - , : -)
+    cleanPart = cleanPart.replace(/([\.\!\?\:\;])\s*([\-\*]\s+|\d+[\.\)]\s+)(?=\S)/g, '$1\n\n$2');
 
-    // B. Numbered list items (e.g. '1. ', '2. ', '10. ', '1) ', '2) ', '2. **Title**') appearing mid-text or inline
+    // B. Split inline numbered list items (' 1. ', ' 2. ', ' 1) ', ' 2) ') appearing mid-sentence
     cleanPart = cleanPart.replace(/([^\n])\s*(\b\d+[\.\)]\s+)(?=\S)/g, '$1\n\n$2');
 
-    // C. Lettered list items (e.g. 'A. ', 'B. ', 'a) ', 'b) ') appearing mid-text
+    // C. Split inline lettered items (' A. ', ' B. ', ' a) ', ' b) ') appearing mid-sentence
     cleanPart = cleanPart.replace(/([^\n])\s*(\b[a-zA-Z][\.\)]\s+)(?=\S)/g, '$1\n\n$2');
 
-    // D. Inline dash list items (' - ') or single newline dash items
-    cleanPart = cleanPart.replace(/([^\n])\s+-\s+(?=\S)/g, '$1\n\n- ');
+    // D. Split inline dash or asterisk separators (' - ', ' * ') mid-sentence
+    cleanPart = cleanPart.replace(/([^\n])\s+[\-\*]\s+(?=\S)/g, '$1\n\n- ');
 
-    // E. Inline asterisk list items (' * ') when not part of bold/italic markdown
-    cleanPart = cleanPart.replace(/([^\n])\s+\*\s+(?=[^\*\s])/g, '$1\n\n* ');
-
-    // F. Ensure double newlines precede any list item starting after text
+    // E. Ensure a double newline precedes any list item starting right after text
     cleanPart = cleanPart.replace(/([^\n])\n([•\-\*]\s+|\d+[\.\)]\s+)/g, '$1\n\n$2');
+
+    // F. Normalize multiple spaces at start of list lines
+    cleanPart = cleanPart.replace(/^\s*[\-\*]\s+/gm, '- ');
 
     return cleanPart;
   });
 
   text = processedParts.join('');
 
-  // 3. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
+  // 4. Ensure maximum 2 consecutive newlines for clean paragraph spacing
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // 5. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
   const trimmed = text.trim();
   if (!text.includes('```') && (LANG_REGEX.test(trimmed) || CODE_KEYWORDS_REGEX.test(trimmed))) {
     const langMatch = trimmed.match(LANG_REGEX);
