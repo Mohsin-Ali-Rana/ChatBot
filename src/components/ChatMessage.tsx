@@ -18,7 +18,11 @@ const preprocessMarkdownText = (rawText: string): string => {
   // 1. Unescape literal \n strings if present in webhook output
   let text = rawText.replace(/\\n/g, '\n');
 
-  // 2. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
+  // 2. Ensure lists on single lines get separated by newlines for clean parsing
+  text = text.replace(/([^\n])\s+(\d+\.\s+[A-Za-z0-9])/g, '$1\n$2');
+  text = text.replace(/([^\n])\s+([•\-\*]\s+[A-Za-z0-9])/g, '$1\n$2');
+
+  // 3. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
   const trimmed = text.trim();
   if (!text.includes('```') && (LANG_REGEX.test(trimmed) || CODE_KEYWORDS_REGEX.test(trimmed))) {
     const langMatch = trimmed.match(LANG_REGEX);
@@ -224,15 +228,15 @@ export const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) =>
           <div className="markdown-body prose prose-invert max-w-none text-slate-100 leading-relaxed text-sm sm:text-[15px] break-words overflow-hidden">
             <ReactMarkdown
               components={{
-                p: ({ children }) => <p className="mb-2.5 last:mb-0 leading-relaxed break-words">{children}</p>,
+                p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed break-words block">{children}</p>,
                 strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
                 em: ({ children }) => <em className="italic text-indigo-200">{children}</em>,
-                ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1 text-slate-200">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1 text-slate-200">{children}</ol>,
-                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                h1: ({ children }) => <h1 className="text-lg sm:text-xl font-extrabold text-white mt-4 mb-2 border-b border-white/10 pb-1">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-base sm:text-lg font-bold text-white mt-3.5 mb-1.5">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold text-indigo-300 mt-3.5 mb-1.5">{children}</h3>,
+                ul: ({ children }) => <ul className="list-disc list-outside pl-6 my-3 space-y-2 text-slate-200 block break-words">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-outside pl-6 my-3 space-y-2 text-slate-200 block break-words">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed pl-1 my-1 text-slate-200 list-item">{children}</li>,
+                h1: ({ children }) => <h1 className="text-lg sm:text-xl font-extrabold text-white mt-5 mb-3 border-b border-white/10 pb-1.5 break-words block">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base sm:text-lg font-bold text-white mt-4 mb-2.5 break-words block">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm sm:text-base font-bold text-indigo-300 mt-3.5 mb-2 break-words block">{children}</h3>,
                 table: ({ children }) => (
                   <div className="my-3 overflow-x-auto rounded-xl border border-white/15 shadow-md">
                     <table className="w-full text-left text-xs sm:text-sm border-collapse">{children}</table>

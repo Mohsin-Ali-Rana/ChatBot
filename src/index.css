@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @layer base {
   body {
@@ -7,6 +8,110 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 }
+
+/* Explicit Markdown Typography & List Spacing Rules */
+.markdown-body {
+  color: #f1f5f9;
+  line-height: 1.7;
+}
+
+.markdown-body p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.markdown-body p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  color: #ffffff;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+
+.markdown-body h1 {
+  font-size: 1.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 0.35rem;
+}
+
+.markdown-body h2 {
+  font-size: 1.2rem;
+}
+
+.markdown-body h3 {
+  font-size: 1.05rem;
+  color: #a5b4fc;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  display: block;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  padding-left: 1.625rem;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li {
+  display: list-item;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+  padding-left: 0.25rem;
+  line-height: 1.6;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #6366f1;
+  background-color: rgba(99, 102, 241, 0.1);
+  padding: 0.5rem 1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+.markdown-body table {
+  width: 100%;
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.markdown-body th {
+  background-color: rgba(15, 23, 42, 0.8);
+  font-weight: 600;
+  color: #a5b4fc;
+}
+
 
 /* Custom Glassmorphism Utility Classes */
 .glass-header {
