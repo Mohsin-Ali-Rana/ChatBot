@@ -11,16 +11,44 @@ interface ChatMessageProps {
 const LANG_REGEX = /^(python|javascript|js|typescript|ts|html|css|json|sql|bash|cpp|c|java|go|rust|php|ruby)\s+/i;
 const CODE_KEYWORDS_REGEX = /(def\s+\w+|function\s+\w+|const\s+\w+|let\s+\w+|class\s+\w+|import\s+.*from|return\s+.*|print\(|console\.log\()/;
 
-// Preprocess raw text from webhook: unescape \n and handle raw code outputs
+// Preprocess raw text from webhook: unescape \n, split squished inline/mid-sentence lists into block lists, and handle raw code outputs
 const preprocessMarkdownText = (rawText: string): string => {
   if (!rawText) return '';
 
   // 1. Unescape literal \n strings if present in webhook output
   let text = rawText.replace(/\\n/g, '\n');
 
-  // 2. Ensure lists on single lines get separated by newlines for clean parsing
-  text = text.replace(/([^\n])\s+(\d+\.\s+[A-Za-z0-9])/g, '$1\n$2');
-  text = text.replace(/([^\n])\s+([•\-\*]\s+[A-Za-z0-9])/g, '$1\n$2');
+  // 2. Process text outside of code blocks to prevent breaking code contents
+  const codeBlockParts = text.split(/(```[\s\S]*?```)/g);
+
+  const processedParts = codeBlockParts.map((part, index) => {
+    // Skip processing inside code blocks (odd indices in split result)
+    if (index % 2 === 1) return part;
+
+    let cleanPart = part;
+
+    // A. Replace bullet symbols (•) appearing mid-sentence or inline with double newlines and markdown dash bullets
+    cleanPart = cleanPart.replace(/([^\n])\s*•\s*/g, '$1\n\n- ');
+    cleanPart = cleanPart.replace(/^•\s*/gm, '- ');
+
+    // B. Insert double newlines before numbered lists (e.g., '1. ', '2. ', '1) ', '2) ') if mid-sentence or after single newline
+    cleanPart = cleanPart.replace(/([^\n])\s+(\d+[\.\)]\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
+    cleanPart = cleanPart.replace(/([^\n])\n(\d+[\.\)]\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
+
+    // C. Insert double newlines before inline dashes (' - ') used as list separators
+    cleanPart = cleanPart.replace(/([^\n])\s+-\s+([A-Za-z0-9"'\`\[])/g, '$1\n\n- $2');
+    cleanPart = cleanPart.replace(/([^\n])\n(-\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
+
+    // D. Insert double newlines before inline asterisk bullets (' * ')
+    cleanPart = cleanPart.replace(/([^\n])\s+\*\s+([A-Za-z0-9"'\`\[])/g, '$1\n\n* $2');
+
+    // E. Ensure a double newline precedes any list block starting right after text
+    cleanPart = cleanPart.replace(/([^\n])\n([•\-\*]\s+|\d+[\.\)]\s+)/g, '$1\n\n$2');
+
+    return cleanPart;
+  });
+
+  text = processedParts.join('');
 
   // 3. If response text lacks triple-backticks but contains unformatted code constructs or language prefix
   const trimmed = text.trim();
