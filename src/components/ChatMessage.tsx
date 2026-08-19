@@ -27,22 +27,23 @@ const preprocessMarkdownText = (rawText: string): string => {
 
     let cleanPart = part;
 
-    // A. Replace bullet symbols (•) appearing mid-sentence or inline with double newlines and markdown dash bullets
-    cleanPart = cleanPart.replace(/([^\n])\s*•\s*/g, '$1\n\n- ');
-    cleanPart = cleanPart.replace(/^•\s*/gm, '- ');
+    // A. Bullet symbols (•, ⁃, ‣, ▪, ▫) -> convert to double newline + markdown dash bullet
+    cleanPart = cleanPart.replace(/([^\n])\s*[•⁃‣▪▫]\s*/g, '$1\n\n- ');
+    cleanPart = cleanPart.replace(/^[•⁃‣▪▫]\s*/gm, '- ');
 
-    // B. Insert double newlines before numbered lists (e.g., '1. ', '2. ', '1) ', '2) ') if mid-sentence or after single newline
-    cleanPart = cleanPart.replace(/([^\n])\s+(\d+[\.\)]\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
-    cleanPart = cleanPart.replace(/([^\n])\n(\d+[\.\)]\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
+    // B. Numbered list items (e.g. '1. ', '2. ', '10. ', '1) ', '2) ', '2. **Title**') appearing mid-text or inline
+    cleanPart = cleanPart.replace(/([^\n])\s*(\b\d+[\.\)]\s+)(?=\S)/g, '$1\n\n$2');
 
-    // C. Insert double newlines before inline dashes (' - ') used as list separators
-    cleanPart = cleanPart.replace(/([^\n])\s+-\s+([A-Za-z0-9"'\`\[])/g, '$1\n\n- $2');
-    cleanPart = cleanPart.replace(/([^\n])\n(-\s+[A-Za-z0-9"'\`\[])/g, '$1\n\n$2');
+    // C. Lettered list items (e.g. 'A. ', 'B. ', 'a) ', 'b) ') appearing mid-text
+    cleanPart = cleanPart.replace(/([^\n])\s*(\b[a-zA-Z][\.\)]\s+)(?=\S)/g, '$1\n\n$2');
 
-    // D. Insert double newlines before inline asterisk bullets (' * ')
-    cleanPart = cleanPart.replace(/([^\n])\s+\*\s+([A-Za-z0-9"'\`\[])/g, '$1\n\n* $2');
+    // D. Inline dash list items (' - ') or single newline dash items
+    cleanPart = cleanPart.replace(/([^\n])\s+-\s+(?=\S)/g, '$1\n\n- ');
 
-    // E. Ensure a double newline precedes any list block starting right after text
+    // E. Inline asterisk list items (' * ') when not part of bold/italic markdown
+    cleanPart = cleanPart.replace(/([^\n])\s+\*\s+(?=[^\*\s])/g, '$1\n\n* ');
+
+    // F. Ensure double newlines precede any list item starting after text
     cleanPart = cleanPart.replace(/([^\n])\n([•\-\*]\s+|\d+[\.\)]\s+)/g, '$1\n\n$2');
 
     return cleanPart;
