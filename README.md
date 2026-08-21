@@ -72,28 +72,29 @@ Nexus AI follows a modular architecture separating presentation, session state, 
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Layer (React + Vite)"]
-        UI["Nexus AI Frontend Console"]
-        State["State Manager & Local Storage"]
+    subgraph Client ["Client Layer"]
+        UI["🖥️ Nexus AI Console"]
+        State["💾 State & Local Storage"]
     end
 
-    subgraph AuthDB ["Persistence Layer (Supabase Cloud)"]
-        Auth["Supabase Auth Guard"]
-        DB[(Supabase DB: chat_history)]
+    subgraph AuthDB ["Persistence Layer"]
+        Auth["🔐 Supabase Auth"]
+        DB[("🗄️ Supabase DB: chat_history")]
     end
 
-    subgraph Automation ["AI Engine Layer (n8n Automation Platform)"]
-        WebhookNode["n8n Webhook Node"]
-        AgentNode["n8n AI Agent / LLM Chain"]
-        Tools["Tools / Search / External DBs"]
+    subgraph Automation ["AI Engine Layer"]
+        WebhookNode["⚡ n8n Webhook Node"]
+        AgentNode["🤖 n8n AI Agent Workflow"]
+        Tools["🔍 External Tools & LLMs"]
     end
 
-    UI <-->|"Authentication & Token Check"| Auth
-    UI <-->|"Sync Chat History"| DB
-    UI -->|"POST /webhook (chatInput, sessionId)"| WebhookNode
+    UI -->|"Authentication Check"| Auth
+    UI -->|"Sync Chat History"| DB
+    UI -->|"Post Chat Payload"| WebhookNode
     WebhookNode --> AgentNode
-    AgentNode <--> Tools
-    AgentNode -->|"JSON Response { output: '...' }"| UI
+    AgentNode --> Tools
+    Tools --> AgentNode
+    AgentNode -->|"Return AI Output"| UI
 ```
 
 1. **User Interaction:** The user submits a prompt in the Nexus AI input bar.
